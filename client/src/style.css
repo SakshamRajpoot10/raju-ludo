@@ -1309,3 +1309,77 @@ html, body {
   .profile-avatar { width: 44px; height: 44px; font-size: 22px; }
   .profile-name { font-size: 16px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHAT UI STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+#chat-toggle-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent), #536dfe);
+  border: none;
+  box-shadow: var(--shadow-card);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-medium);
+}
+#chat-toggle-btn.visible {
+  display: flex;
+}
+#chat-toggle-btn:hover {
+  transform: scale(1.1);
+}
+
+#chat-input-bar {
+  position: fixed;
+  bottom: -80px;
+  left: 20px;
+  width: calc(100% - 40px);
+  max-width: 400px;
+  display: flex;
+  gap: 10px;
+  background: var(--color-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 10px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-card);
+  z-index: 100;
+  transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#chat-input-bar.active {
+  bottom: 20px;
+}
+#chat-input-bar input {
+  flex-grow: 1;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  padding: 10px 16px;
+  color: white;
+  outline: none;
+  font-family: var(--font-body);
+}
+#chat-input-bar button {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  transition: transform 0.2s;
+}
+#chat-input-bar button:active {
+  transform: scale(0.9);
+}

@@ -11,7 +11,7 @@ import { GAME_TYPE, GAME_STATUS, PLAYERS } from '../engine/constants.js';
 import { getValidMoves } from '../engine/helpers.js';
 
 const RECONNECT_TIMEOUT_MS = 60000; // 60 seconds
-const PLAYER_COLORS = [PLAYERS.RED, PLAYERS.GREEN, PLAYERS.YELLOW, PLAYERS.BLUE];
+// We'll define the colors dynamically based on maxPlayers inside the class.
 
 export class GameRoom {
   constructor(options = {}) {
@@ -33,6 +33,12 @@ export class GameRoom {
     this.hostSocketId = null;
   }
 
+  _getAvailableColors() {
+    if (this.maxPlayers === 2) return [PLAYERS.RED, PLAYERS.YELLOW];
+    if (this.maxPlayers === 3) return [PLAYERS.RED, PLAYERS.GREEN, PLAYERS.YELLOW];
+    return [PLAYERS.RED, PLAYERS.GREEN, PLAYERS.YELLOW, PLAYERS.BLUE];
+  }
+
   /**
    * Adds a player to the room.
    * @param {string} socketId
@@ -51,7 +57,7 @@ export class GameRoom {
     }
 
     // Assign next available color
-    const assignedColor = PLAYER_COLORS.find(c => !this.colorToSocketId.has(c));
+    const assignedColor = this._getAvailableColors().find(c => !this.colorToSocketId.has(c));
     if (!assignedColor) {
       return { success: false, error: 'No available color slots' };
     }
@@ -109,7 +115,7 @@ export class GameRoom {
     }
 
     // Get active player colors in order
-    const activeColors = PLAYER_COLORS.filter(c => this.colorToSocketId.has(c));
+    const activeColors = this._getAvailableColors().filter(c => this.colorToSocketId.has(c));
 
     // Create engine state
     if (this.gameType === GAME_TYPE.LUDO) {

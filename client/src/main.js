@@ -82,6 +82,7 @@ class LudoGame {
 
       this.myColor = config.myColor;
       this.gameState = config.gameState;
+      this._hideInactivePlayers();
       this._syncPiecePositions();
       this._updateUI();
       this._setupOnlineListeners();
@@ -166,17 +167,29 @@ class LudoGame {
     this.container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0a1a);
+    this.scene.background = new THREE.Color(0x0b0510); // Deep galaxy purple
+    this.scene.fog = new THREE.FogExp2(0x0b0510, 0.012);
 
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    this.camera.position.set(0, 18, 10);
+    // 360 Degree Starry Scene
+    const starsGeo = new THREE.BufferGeometry();
+    const starsVerts = [];
+    for(let i = 0; i < 2000; i++) {
+      starsVerts.push((Math.random()-0.5)*300, (Math.random()-0.5)*300, (Math.random()-0.5)*300);
+    }
+    starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsVerts, 3));
+    const starsMat = new THREE.PointsMaterial({color: 0xffffff, size: 0.3, transparent: true, opacity: 0.6});
+    const starField = new THREE.Points(starsGeo, starsMat);
+    this.scene.add(starField);
+
+    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+    this.camera.position.set(0, 25, 15);
     this.camera.lookAt(0, 0, 0);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.minDistance = 8;
-    this.controls.maxDistance = 25;
+    this.controls.maxDistance = 50;
     this.controls.maxPolarAngle = Math.PI / 2.3;
     this.controls.target.set(0, 0, 0);
 
