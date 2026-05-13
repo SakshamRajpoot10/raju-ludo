@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Raju Ludo — A professional 3D Ludo & Snakes and Ladders game with physics-based dice, hop animations, and stunning visuals.">
+  <title>Raju Ludo — 3D Board Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <!-- 3D Game Canvas -->
+  <div id="game-container"></div>
+
+  <!-- HUD Overlay -->
+  <div id="hud">
+    <!-- Top Bar -->
+    <header id="top-bar">
+      <div class="logo">
+        <span class="logo-icon">🎲</span>
+        <h1>Raju Ludo</h1>
+      </div>
+      <div id="turn-info">
+        <span class="turn-label">TURN</span>
+        <span id="player-indicator">RED</span>
+      </div>
+    </header>
+
+    <!-- Player Scoreboard -->
+    <aside id="scoreboard">
+      <div class="player-card" id="player-card-red">
+        <div class="player-color" style="--player-color: #E53935"></div>
+        <span class="player-name">Red</span>
+        <span class="player-score" id="score-red">0/4</span>
+      </div>
+      <div class="player-card" id="player-card-green">
+        <div class="player-color" style="--player-color: #43A047"></div>
+        <span class="player-name">Green</span>
+        <span class="player-score" id="score-green">0/4</span>
+      </div>
+      <div class="player-card" id="player-card-yellow">
+        <div class="player-color" style="--player-color: #FDD835"></div>
+        <span class="player-name">Yellow</span>
+        <span class="player-score" id="score-yellow">0/4</span>
+      </div>
+      <div class="player-card" id="player-card-blue">
+        <div class="player-color" style="--player-color: #1E88E5"></div>
+        <span class="player-name">Blue</span>
+        <span class="player-score" id="score-blue">0/4</span>
+      </div>
+    </aside>
+
+    <!-- Dice & Controls -->
+    <div id="controls-panel">
+      <div id="dice-display">
+        <span id="dice-value">—</span>
+      </div>
+      <button id="roll-btn">
+        <span class="btn-text">🎲 Roll Dice</span>
+        <span class="btn-shine"></span>
+      </button>
+      <p id="message">Red's turn — Roll the dice!</p>
+    </div>
+
+    <!-- Flash Message (center screen) -->
+    <div id="flash-message"></div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

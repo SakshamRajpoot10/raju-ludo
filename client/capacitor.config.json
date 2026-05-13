@@ -1,0 +1,13 @@
+{
+  "appId": "com.raju.ludo",
+  "appName": "Raju Ludo",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "buildOptions": {
+      "signingType": "apksigner"
+    }
+  }
+}
