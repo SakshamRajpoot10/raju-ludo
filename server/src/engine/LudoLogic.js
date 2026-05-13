@@ -230,3 +230,32 @@ export function getGameSummary(state) {
   }
   return summary;
 }
+
+/**
+ * Eliminates a player from the game (e.g. if they leave).
+ */
+export function eliminatePlayer(state, playerColor) {
+  if (state.gameStatus !== GAME_STATUS.IN_PROGRESS) return { state, events: [] };
+  if (!state.players[playerColor] || state.players[playerColor].hasLeft) return { state, events: [] };
+
+  const newState = deepClone(state);
+  const events = [{ type: 'PLAYER_LEFT', player: playerColor }];
+  
+  newState.players[playerColor].hasLeft = true;
+
+  if (isGameOver(newState)) {
+    const remaining = newState.turnOrder.filter(p => !newState.rankings.includes(p) && !newState.players[p].hasLeft);
+    newState.rankings.push(...remaining);
+    newState.gameStatus = GAME_STATUS.FINISHED;
+    newState.winner = newState.rankings[0];
+    events.push({ type: 'GAME_OVER', winner: newState.winner, rankings: [...newState.rankings] });
+  } else if (newState.currentPlayer === playerColor) {
+    // Skip their turn
+    newState.currentPlayer = getNextPlayer(newState);
+    newState.consecutiveSixes = 0;
+    newState.turnPhase = 'ROLL';
+    newState.diceValue = null;
+  }
+
+  return { state: newState, events };
+}

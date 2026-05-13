@@ -5,7 +5,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { createLudoGameState, applyDiceRoll, applyMove, rollDice } from '../engine/LudoLogic.js';
+import { createLudoGameState, applyDiceRoll, applyMove, rollDice, eliminatePlayer } from '../engine/LudoLogic.js';
 import { createSLGameState, applySLDiceRoll, applySLMove } from '../engine/SnakeLadderLogic.js';
 import { GAME_TYPE, GAME_STATUS, PLAYERS } from '../engine/constants.js';
 import { getValidMoves } from '../engine/helpers.js';
@@ -95,6 +95,33 @@ export class GameRoom {
       const remaining = [...this.players.keys()];
       this.hostSocketId = remaining.length > 0 ? remaining[0] : null;
     }
+  }
+
+  /**
+   * Handles a player leaving the game intentionally or timing out.
+   * If in lobby, removes them. If in game, eliminates them.
+   */
+  handlePlayerLeave(socketId) {
+    const color = this.socketIdToColor.get(socketId);
+    if (!color) return { success: false };
+
+    if (this.status === 'WAITING') {
+      this.removePlayer(socketId);
+      return { success: true, eliminated: false, color };
+    }
+
+    // In Progress - Eliminate
+    if (this.gameType === GAME_TYPE.LUDO && this.gameState) {
+      const result = eliminatePlayer(this.gameState, color);
+      this.gameState = result.state;
+      
+      if (this.gameState.gameStatus === GAME_STATUS.FINISHED) {
+        this.status = 'FINISHED';
+      }
+      return { success: true, eliminated: true, color, events: result.events, gameState: this.gameState };
+    }
+    
+    return { success: true, eliminated: true, color };
   }
 
   /**
@@ -385,23 +412,20 @@ export class RoomManager {
     return this.createRoom(socketId, displayName, options);
   }
 
-  /**
-   * Leaves current room.
-   */
   leaveRoom(socketId) {
     const roomId = this.socketToRoom.get(socketId);
-    if (!roomId) return;
+    if (!roomId) return null;
 
     const room = this.rooms.get(roomId);
-    if (!room) return;
+    if (!room) return null;
 
-    room.removePlayer(socketId);
+    const result = room.handlePlayerLeave(socketId);
     this.socketToRoom.delete(socketId);
 
-    // Clean up empty rooms
     if (room.isEmpty()) {
       this.rooms.delete(roomId);
     }
+    return result;
   }
 
   /**

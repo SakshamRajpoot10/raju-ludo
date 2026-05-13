@@ -99,7 +99,7 @@ export function setupSocketHandlers(io) {
       const roomId = room.id;
       const color = room.socketIdToColor.get(socket.id);
 
-      roomManager.leaveRoom(socket.id);
+      const result = roomManager.leaveRoom(socket.id);
       socket.leave(roomId);
 
       // Notify remaining players
@@ -107,6 +107,25 @@ export function setupSocketHandlers(io) {
         color,
         roomInfo: room.getRoomInfo(),
       });
+
+      if (result && result.eliminated) {
+        // Broadcast the state change so others know whose turn it is now
+        io.to(roomId).emit('game:pieceMoved', {
+          movedBy: color,
+          pieceIndex: -1,
+          events: result.events,
+          gameState: result.gameState,
+        });
+
+        // Check if game is over
+        if (result.gameState.gameStatus === 'FINISHED') {
+          io.to(roomId).emit('game:over', {
+            winner: result.gameState.winner,
+            rankings: result.gameState.rankings,
+            gameState: result.gameState,
+          });
+        }
+      }
 
       callback?.({ success: true });
       console.log(`[ROOM] ${color} left room ${roomId}`);

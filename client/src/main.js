@@ -62,22 +62,9 @@ class LudoGame {
     this.mode = config.mode;
     document.getElementById('hud').style.display = 'block';
 
-    if (config.mode === 'offline') {
-      // Disable chat in offline mode
-      this.chat.disable();
-
-      // Create game with selected player count (2, 3, or 4)
-      const playerCount = config.playerCount || 4;
-      this.gameState = GameEngine.createGame(GAME_TYPE.LUDO, playerCount);
-
-      // Hide pieces for players not in this game
-      this._hideInactivePlayers();
-
-      this._syncPiecePositions();
-      this._updateUI();
-      this._showMessage(`${this.gameState.currentPlayer.toUpperCase()}'s turn — Roll the dice!`);
-    } else {
-      // Enable chat for online modes
+    const leaveBtn = document.getElementById('leave-btn');
+    if (config.mode === 'online') {
+      if (leaveBtn) leaveBtn.style.display = 'block';
       this.chat.enable();
 
       this.myColor = config.myColor;
@@ -87,6 +74,17 @@ class LudoGame {
       this._updateUI();
       this._setupOnlineListeners();
       this._showMessage(`Online game! You are ${this.myColor.toUpperCase()}.`);
+    } else {
+      if (leaveBtn) leaveBtn.style.display = 'none';
+      this.chat.disable();
+
+      const playerCount = config.playerCount || 4;
+      this.gameState = GameEngine.createGame(GAME_TYPE.LUDO, playerCount);
+
+      this._hideInactivePlayers();
+      this._syncPiecePositions();
+      this._updateUI();
+      this._showMessage(`${this.gameState.currentPlayer.toUpperCase()}'s turn — Roll the dice!`);
     }
   }
 
@@ -107,14 +105,37 @@ class LudoGame {
     });
 
     socketService.on('game:pieceMoved', async (data) => {
-      for (const event of data.events) {
-        await this._processEvent(event);
+      // If a move happened due to elimination (pieceIndex === -1), skip pieces update
+      if (data.pieceIndex !== -1) {
+        for (const event of data.events) {
+          await this._processEvent(event);
+        }
+      } else {
+        for (const event of data.events) {
+          await this._processEvent(event);
+        }
       }
       this.gameState = data.gameState;
+      this._syncPiecePositions();
       this._updateUI();
-      if (this.gameState.currentPlayer === this.myColor) {
-        this._showMessage("Your turn! Roll the dice.");
+
+      if (this.gameState.gameStatus === GAME_STATUS.FINISHED) {
+        this._showGameOver();
+        return;
       }
+
+      this.rollButton.disabled = this.gameState.currentPlayer !== this.myColor ||
+        (this.gameState.turnPhase !== 'ROLL' && this.gameState.turnPhase !== 'EXTRA_ROLL');
+
+      if (this.gameState.turnPhase === 'EXTRA_ROLL') {
+        this._showMessage(`Bonus turn! ${this.gameState.currentPlayer.toUpperCase()} rolls again!`);
+      } else {
+        this._showMessage(`${this.gameState.currentPlayer.toUpperCase()}'s turn — Roll the dice!`);
+      }
+    });
+
+    socketService.on('room:playerLeft', (data) => {
+      this._flashMessage(`${data.color.toUpperCase()} LEFT THE MATCH`, '#E53935');
     });
 
     socketService.on('game:over', (data) => {
@@ -256,6 +277,16 @@ class LudoGame {
     this.diceValueDisplay = document.getElementById('dice-value');
     this.rollButton = document.getElementById('roll-btn');
     this.messageDisplay = document.getElementById('message');
+
+    this.leaveButton = document.getElementById('leave-btn');
+    this.leaveButton?.addEventListener('click', () => {
+      if (confirm('Are you sure you want to leave the game?')) {
+        if (this.mode === 'online') {
+          socketService.socket.emit('room:leave');
+        }
+        window.location.reload();
+      }
+    });
   }
 
   _initControls() {
@@ -427,6 +458,9 @@ class LudoGame {
         break;
       case 'PLAYER_FINISHED':
         this._flashMessage(`🏆 ${event.player.toUpperCase()} #${event.rank}!`, COLORS[event.player].main);
+        if (event.rank === 1 || (this.mode === 'online' && event.player === this.myColor)) {
+          this._celebrate();
+        }
         break;
     }
   }
@@ -444,7 +478,6 @@ class LudoGame {
     this.highlightedPieces.forEach(p => setHighlight(p, false));
     this.highlightedPieces = [];
   }
-
   _updateUI() {
     if (!this.gameState) return;
     const player = this.gameState.currentPlayer;
@@ -462,6 +495,40 @@ class LudoGame {
       if (card) {
         card.style.display = isActive ? '' : 'none';
         card.classList.toggle('active', c === player);
+
+        // Handle Rank/Crown
+        let rankBadge = card.querySelector('.rank-badge');
+        if (!rankBadge) {
+          rankBadge = document.createElement('div');
+          rankBadge.className = 'rank-badge';
+          card.appendChild(rankBadge);
+        }
+
+        const rankings = this.gameState.rankings || [];
+        const rankIndex = rankings.indexOf(c);
+        if (rankIndex !== -1) {
+          const rank = rankIndex + 1;
+          rankBadge.innerHTML = `👑 ${rank}`;
+          rankBadge.style.display = 'block';
+        } else {
+          rankBadge.style.display = 'none';
+        }
+
+        // Handle Left/Eliminated players
+        if (this.gameState.players[c] && this.gameState.players[c].hasLeft) {
+          card.classList.add('eliminated');
+          let cross = card.querySelector('.eliminated-cross');
+          if (!cross) {
+            cross = document.createElement('div');
+            cross.className = 'eliminated-cross';
+            cross.textContent = '❌';
+            card.appendChild(cross);
+          }
+        } else {
+          card.classList.remove('eliminated');
+          const cross = card.querySelector('.eliminated-cross');
+          if (cross) cross.remove();
+        }
       }
       if (el && isActive) el.textContent = `${this.gameState.players[c].finishedCount}/${PIECES_PER_PLAYER}`;
     });
@@ -471,7 +538,6 @@ class LudoGame {
         (this.gameState.turnPhase !== 'ROLL' && this.gameState.turnPhase !== 'EXTRA_ROLL');
     }
   }
-
   _showMessage(text) {
     if (this.messageDisplay) {
       this.messageDisplay.textContent = text;
@@ -499,7 +565,119 @@ class LudoGame {
     const w = this.gameState.winner;
     this._showMessage(`🎉 ${w.toUpperCase()} WINS! 🎉`);
     this._flashMessage(`🏆 ${w.toUpperCase()} IS THE CHAMPION! 🏆`, COLORS[w].main);
+    this._celebrate();
     gsap.to(this.camera.position, { y: 22, duration: 2, ease: 'power2.inOut' });
+  }
+
+  _celebrate() {
+    // Web Audio API Sound synthesis (clapping/applause + nice major fanfare arpeggio)
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Applause simulation
+      const bufferSize = ctx.sampleRate * 2.0; 
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const clapNoise = ctx.createBufferSource();
+      clapNoise.buffer = buffer;
+      
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1000;
+      filter.Q.value = 1.0;
+      
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      
+      for (let time = 0; time < 2.0; time += 0.04 + Math.random() * 0.08) {
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + time);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + time + 0.06);
+      }
+
+      clapNoise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      clapNoise.start();
+
+      // Fanfare
+      const melody = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+      melody.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const oscGain = ctx.createGain();
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+        oscGain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.12);
+        oscGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.12 + 0.3);
+        osc.connect(oscGain);
+        oscGain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.12);
+        osc.stop(ctx.currentTime + idx * 0.12 + 0.3);
+      });
+    } catch (e) {
+      console.warn('Audio Context failed', e);
+    }
+
+    // 2D Canvas Confetti Overlay
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '9999';
+    document.body.appendChild(canvas);
+    
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const particles = [];
+    const colors = ['#E53935', '#43A047', '#FDD835', '#1E88E5', '#FF3D00', '#00E676', '#FFFF00', '#00E5FF'];
+    
+    for (let i = 0; i < 150; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * -canvas.height,
+        r: Math.random() * 6 + 4,
+        d: Math.random() * canvas.height,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        tilt: Math.random() * 10 - 5,
+        tiltAngleIncremental: Math.random() * 0.07 + 0.02,
+        tiltAngle: 0
+      });
+    }
+    
+    let active = true;
+    setTimeout(() => { active = false; canvas.remove(); }, 5000);
+    
+    function drawConfetti() {
+      if (!active) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p, idx) => {
+        p.tiltAngle += p.tiltAngleIncremental;
+        p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+        p.tilt = Math.sin(p.tiltAngle - idx / 3) * 15;
+        
+        if (p.y > canvas.height) {
+          p.x = Math.random() * canvas.width;
+          p.y = -20;
+          p.tilt = Math.random() * 10 - 5;
+        }
+        
+        ctx.beginPath();
+        ctx.lineWidth = p.r;
+        ctx.strokeStyle = p.color;
+        ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+        ctx.stroke();
+      });
+      requestAnimationFrame(drawConfetti);
+    }
+    drawConfetti();
   }
 
   _animate() {

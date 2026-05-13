@@ -332,13 +332,12 @@ export function getNextPlayer(gameState) {
     const nextIndex = (currentIndex + i) % totalPlayers;
     const nextPlayer = turnOrder[nextIndex];
 
-    // Skip players who have finished all pieces
-    if (players[nextPlayer].finishedCount < PIECES_PER_PLAYER) {
+    // Skip players who have finished all pieces or have left
+    if (players[nextPlayer].finishedCount < PIECES_PER_PLAYER && !players[nextPlayer].hasLeft) {
       return nextPlayer;
     }
   }
 
-  // All players finished — should not reach here in normal gameplay
   return currentPlayer;
 }
 
@@ -374,7 +373,7 @@ export function hasPlayerWon(playerData) {
 export function isGameOver(gameState) {
   const { players, turnOrder } = gameState;
   const activePlayers = turnOrder.filter(
-    p => players[p].finishedCount < PIECES_PER_PLAYER
+    p => players[p].finishedCount < PIECES_PER_PLAYER && !players[p].hasLeft
   );
   return activePlayers.length <= 1;
 }
