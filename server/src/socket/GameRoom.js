@@ -34,9 +34,8 @@ export class GameRoom {
   }
 
   _getAvailableColors() {
-    if (this.maxPlayers === 2) return [PLAYERS.RED, PLAYERS.YELLOW];
-    if (this.maxPlayers === 3) return [PLAYERS.RED, PLAYERS.GREEN, PLAYERS.YELLOW];
-    return [PLAYERS.RED, PLAYERS.GREEN, PLAYERS.YELLOW, PLAYERS.BLUE];
+    // By ordering Red then Yellow, the first two players to join will always be seated opposite each other.
+    return [PLAYERS.RED, PLAYERS.YELLOW, PLAYERS.GREEN, PLAYERS.BLUE];
   }
 
   /**
