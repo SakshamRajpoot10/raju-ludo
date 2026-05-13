@@ -7,7 +7,7 @@ dotenv.config();
 
 export default {
   port: parseInt(process.env.PORT || '4000'),
-  clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:3000',
+  clientOrigin: process.env.CLIENT_ORIGIN || '*',
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/raju-ludo',
   jwtSecret: process.env.JWT_SECRET || 'raju-ludo-dev-secret',
   initialCoins: parseInt(process.env.INITIAL_COINS || '5000'),
