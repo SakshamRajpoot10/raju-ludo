@@ -1316,7 +1316,7 @@ html, body {
 #chat-toggle-btn {
   position: fixed;
   bottom: 20px;
-  left: 20px;
+  right: 20px;
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -1342,7 +1342,7 @@ html, body {
 #chat-input-bar {
   position: fixed;
   bottom: -80px;
-  left: 20px;
+  right: 20px;
   width: calc(100% - 40px);
   max-width: 400px;
   display: flex;
